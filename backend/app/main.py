@@ -17,7 +17,7 @@ print("ROTAS:", [getattr(rota, "path", type(rota).__name__) for rota in app.rout
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "https://python-ai-assistant.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
