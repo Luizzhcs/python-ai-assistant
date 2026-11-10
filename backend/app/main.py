@@ -3,9 +3,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes.perguntas_routes import perguntas_router
 
-app = FastAPI(title="Python AI Assistant API", description="API de um assistente de estudos em Python baseado em RAG, LangChain e Gemini.", version="1.0.0")
+app = FastAPI(
+    title="Python AI Assistant API",
+    description="API de um assistente de estudos em Python baseado em RAG, LangChain e Gemini.",
+    version="1.0.0"
+)
 
 app.include_router(perguntas_router)
+
+print("DOCS URL:", app.docs_url)
+print("OPENAPI URL:", app.openapi_url)
+print("ROTAS:", [rota.path for rota in app.routes])
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
