@@ -1,10 +1,14 @@
 import logging
+import shutil
 from pathlib import Path
 
+from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -13,6 +17,8 @@ logging.basicConfig(
 )
 
 PASTA_BASE = Path(__file__).resolve().parent.parent / "base"
+CAMINHO_DB = "db"
+
 
 def criar_db():
     logger.info("Iniciando criação do banco vetorial.")
@@ -20,6 +26,7 @@ def criar_db():
     chunks = dividir_chuncks(documentos)
     vetorizar_chunks(chunks)
     logger.info("Banco vetorial criado com sucesso.")
+
 
 def carregar_documentos():
     caminho_base = PASTA_BASE.resolve()
@@ -81,9 +88,18 @@ def dividir_chuncks(documentos):
 
 
 def vetorizar_chunks(chunks):
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-    db = Chroma.from_documents(chunks, embeddings, persist_directory="db")
+    # Apaga o db antigo (gerado com MiniLM, incompatível com Gemini)
+    shutil.rmtree(CAMINHO_DB, ignore_errors=True)
+
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
+
+    # Indexa em lotes para evitar erro 429 (limite de requisições da API)
+    db = Chroma(persist_directory=CAMINHO_DB, embedding_function=embeddings)
+    tamanho_lote = 50
+    for i in range(0, len(chunks), tamanho_lote):
+        lote = chunks[i:i + tamanho_lote]
+        db.add_documents(lote)
+        logger.info("Indexados %d/%d chunks.", min(i + tamanho_lote, len(chunks)), len(chunks))
 
 
 criar_db()
- 

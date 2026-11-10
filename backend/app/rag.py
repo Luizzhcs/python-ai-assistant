@@ -1,9 +1,7 @@
-
 from functools import lru_cache
 
 from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
 
@@ -33,8 +31,8 @@ Base de conhecimento:
 
 @lru_cache(maxsize=1)
 def carregar_embeddings():
-    return HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    return GoogleGenerativeAIEmbeddings(
+        model="models/gemini-embedding-001"
     )
 
 
