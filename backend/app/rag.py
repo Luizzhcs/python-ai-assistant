@@ -1,3 +1,6 @@
+
+from functools import lru_cache
+
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -27,35 +30,59 @@ Base de conhecimento:
 {base_conhecimento}
 """
 
-def responder(pergunta: str) -> str:
-   
-    
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-    db = Chroma(
-        persist_directory=CAMINHO_DB,
-        embedding_function=embeddings
+
+@lru_cache(maxsize=1)
+def carregar_embeddings():
+    return HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
 
-    resultados = db.similarity_search_with_relevance_scores(pergunta, k=4)
+
+@lru_cache(maxsize=1)
+def carregar_db():
+    return Chroma(
+        persist_directory=CAMINHO_DB,
+        embedding_function=carregar_embeddings()
+    )
+
+
+@lru_cache(maxsize=1)
+def carregar_modelo():
+    return ChatGoogleGenerativeAI(
+        model="gemini-3.5-flash-lite"
+    )
+
+
+def responder(pergunta: str) -> str:
+    db = carregar_db()
+
+    resultados = db.similarity_search_with_relevance_scores(
+        pergunta,
+        k=4
+    )
 
     if not resultados or resultados[0][1] < 0.35:
-        return "Não encontrei informações relevantes na base de conhecimento"
-        
+        return "Não encontrei informações relevantes na base de conhecimento."
+
     textos_resultado = []
-    
-    for resultado in resultados: 
+
+    for resultado in resultados:
         documento = resultado[0]
         texto = documento.page_content
         pagina = documento.metadata["page"] + 1
-        
+
         textos_resultado.append(f"Página {pagina}:\n{texto}")
+
     base_conhecimento = "\n\n----\n\n".join(textos_resultado)
-    
+
     prompt = ChatPromptTemplate.from_template(prompt_template)
-    prompt = prompt.invoke({"pergunta": pergunta, "base_conhecimento": base_conhecimento})
-    
-    modelo = ChatGoogleGenerativeAI(model="gemini-3.5-flash-lite")
-    resposta = modelo.invoke(prompt).content
+
+    prompt = prompt.invoke({
+        "pergunta": pergunta,
+        "base_conhecimento": base_conhecimento
+    })
+
+    resposta = carregar_modelo().invoke(prompt).content
 
     if isinstance(resposta, list):
         resposta = "\n".join(
@@ -64,5 +91,3 @@ def responder(pergunta: str) -> str:
         )
 
     return resposta
-    
-    
