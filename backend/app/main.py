@@ -13,7 +13,7 @@ app.include_router(perguntas_router)
 
 print("DOCS URL:", app.docs_url)
 print("OPENAPI URL:", app.openapi_url)
-print("ROTAS:", [rota.path for rota in app.routes])
+print("ROTAS:", [getattr(rota, "path", type(rota).__name__) for rota in app.routes])
 
 app.add_middleware(
     CORSMiddleware,
